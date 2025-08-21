@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI News Summarizer</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/compromise@14.8.1/builds/compromise.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -24,7 +25,7 @@
         }
         
         .container {
-            width: 90%;
+            width: 100%;
             max-width: 1500px;
             background: white;
             border-radius: 15px;
@@ -247,23 +248,29 @@
         .feature-list li {
             margin-bottom: 8px;
         }
+        
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border-left: 5px solid #28a745;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
             <h1><i class="fas fa-newspaper"></i> AI News Summarizer</h1>
-            <p class="subtitle">Transform lengthy articles into concise summaries with artificial intelligence</p>
+            <p class="subtitle">Transform lengthy articles into concise summaries with AI - Client-side Version</p>
         </header>
         
         <div class="content">
             <div class="input-section">
                 <h3 class="section-title"><i class="fas fa-pencil-alt"></i> Input Article</h3>
                 
-                <!-- <div class="notification warning">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <div>No Hugging Face API token detected. Showing mock summaries for demonstration. Add your HF_API_TOKEN to the .env file for real AI summaries.</div>
-                </div> -->
+                <div class="notification info">
+                    <i class="fas fa-info-circle"></i>
+                    <div>This client-side version uses NLP in your browser. For best results, use articles with at least 100 words.</div>
+                </div>
                 
                 <textarea id="newsInput" placeholder="Paste your news article here... (Minimum 100 words for best results)"></textarea>
                 <div class="word-count">Word count: <span id="wordCount">0</span></div>
@@ -281,9 +288,9 @@
                     </button>
                 </div>
                 
-                <div class="notification info">
-                    <i class="fas fa-info-circle"></i>
-                    <div>For best results, use articles with at least 100 words. Press Ctrl+Enter to summarize.</div>
+                <div class="notification warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <div>Note: This is a client-side version. Summaries are generated in your browser using JavaScript.</div>
                 </div>
             </div>
             
@@ -298,17 +305,17 @@
                 <div class="feature-list">
                     <p><strong>Features:</strong></p>
                     <ul>
-                        <li>Advanced AI-powered summarization</li>
+                        <li>Client-side AI-powered summarization</li>
+                        <li>No data sent to servers - completely private</li>
                         <li>Preserves key information and context</li>
-                        <li>Handles articles of any length</li>
-                        <li>Fast and efficient processing</li>
+                        <li>Fast and efficient processing in your browser</li>
                     </ul>
                 </div>
             </div>
         </div>
         
         <footer>
-            <p>Powered by Hugging Face AI Models | Built with Go & Gin | Demo Version</p>
+            <p>Powered by Compromise NLP | Client-side Version | Ready for GitHub Pages Deployment</p>
         </footer>
     </div>
 
@@ -352,24 +359,58 @@ Inflation concerns are also shaping economic policy. Central banks are carefully
             document.getElementById('newsInput').dispatchEvent(event);
         }
         
-        // Generate a mock summary for demonstration
-        function generateMockSummary(text) {
-            // Simple algorithm to create a mock summary
-            const sentences = text.split('. ');
+        // Text summarization using Compromise NLP
+        function summarizeText(text) {
+            if (!window.nlp) {
+                throw new Error("NLP library not loaded");
+            }
+            
+            let doc = window.nlp(text);
+            
+            // Extract sentences
+            let sentences = doc.sentences().out('array');
             if (sentences.length <= 3) return text; // Too short to summarize
             
-            // Select the first, middle, and last sentences
-            const firstSentence = sentences[0];
-            const middleIndex = Math.floor(sentences.length / 2);
-            const middleSentence = sentences[middleIndex];
-            const lastSentence = sentences[sentences.length - 1];
+            // Calculate sentence importance (simple algorithm)
+            let scoredSentences = sentences.map(sentence => {
+                let score = 0;
+                
+                // Score based on position (first sentences are more important)
+                let position = sentences.indexOf(sentence);
+                if (position === 0) score += 3;
+                else if (position < 3) score += 2;
+                else if (position < 5) score += 1;
+                
+                // Score based on length (medium length sentences are better)
+                let wordCount = sentence.split(' ').length;
+                if (wordCount > 8 && wordCount < 25) score += 2;
+                
+                // Score based on question words (questions are often important)
+                if (sentence.includes('?') || 
+                    sentence.toLowerCase().includes('why') ||
+                    sentence.toLowerCase().includes('how') ||
+                    sentence.toLowerCase().includes('what')) {
+                    score += 2;
+                }
+                
+                return { sentence, score };
+            });
             
-            // Combine into a summary
-            return `${firstSentence}. ${middleSentence}. ${lastSentence}. [This is a mock summary for demonstration purposes. Add your HF_API_TOKEN to the .env file for real AI summaries.]`;
+            // Sort by score and take top 3-4 sentences
+            scoredSentences.sort((a, b) => b.score - a.score);
+            let summaryLength = Math.min(4, Math.max(3, Math.floor(sentences.length / 3)));
+            let summarySentences = scoredSentences.slice(0, summaryLength);
+            
+            // Return sentences in original order
+            summarySentences.sort((a, b) => 
+                sentences.indexOf(a.sentence) - sentences.indexOf(b.sentence)
+            );
+            
+            return summarySentences.map(s => s.sentence).join(' ') + 
+                   "\n\n[Summary generated client-side using NLP]";
         }
         
         // Summarize function
-        // Summarize function - UPDATED VERSION
         async function summarize() {
             const text = document.getElementById('newsInput').value.trim();
             const resultDiv = document.getElementById('result');
@@ -410,80 +451,45 @@ Inflation concerns are also shaping economic policy. Central banks are carefully
             
             button.disabled = true;
             
-            try {
-                // Make actual API call to your Go backend
-                const response = await fetch('/summarize', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ text: text })
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok) {
-                    // Display the actual summary from the API
+            // Use setTimeout to allow the UI to update before processing
+            setTimeout(() => {
+                try {
+                    // Generate summary using client-side NLP
+                    const summary = summarizeText(text);
+                    
+                    // Display the summary
                     resultDiv.innerHTML = `
-                        <div class="summary-text">${data.summary}</div>
+                        <div class="summary-text">${summary}</div>
+                        <div class="notification success">
+                            <i class="fas fa-check-circle"></i>
+                            <div>Summary generated successfully using client-side processing!</div>
+                        </div>
                     `;
-                } else {
-                    // Show error message
+                } catch (error) {
+                    console.error('Error:', error);
                     resultDiv.innerHTML = `
                         <div class="notification error">
                             <i class="fas fa-exclamation-circle"></i>
-                            <div>Error: ${data.error || 'Failed to generate summary'}</div>
+                            <div>Error: ${error.message}</div>
                         </div>
                     `;
+                } finally {
+                    button.disabled = false;
                 }
-            } catch (error) {
-                console.error('Error:', error);
-                resultDiv.innerHTML = `
-                    <div class="notification error">
-                        <i class="fas fa-exclamation-circle"></i>
-                        <div>Network error: Failed to connect to the server</div>
-                    </div>
-                `;
-            } finally {
-                button.disabled = false;
-            }
+            }, 100);
         }
-
+        
         // Allow submitting with Ctrl+Enter
         document.getElementById('newsInput').addEventListener('keydown', function(e) {
             if (e.ctrlKey && e.key === 'Enter') {
                 summarize();
             }
         });
-
-        // Check if Hugging Face token is configured
-        async function checkServerStatus() {
-            try {
-                const response = await fetch('/health');
-                const data = await response.json();
-                
-                if (data.status === 'ok_no_token') {
-                    // Show warning if no token is configured
-                    const notificationContainer = document.querySelector('.input-section');
-                    const warningDiv = document.createElement('div');
-                    warningDiv.className = 'notification warning';
-                    warningDiv.innerHTML = `
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <div>No Hugging Face API token detected. Showing mock summaries for demonstration. Add your HF_API_TOKEN to the .env file for real AI summaries.</div>
-                    `;
-                    
-                    // Insert after the section title
-                    const sectionTitle = document.querySelector('.section-title');
-                    sectionTitle.parentNode.insertBefore(warningDiv, sectionTitle.nextSibling);
-                }
-            } catch (error) {
-                console.error('Could not check server status:', error);
-            }
-        }
-
-        // Check server status when page loads
-        document.addEventListener('DOMContentLoaded', checkServerStatus);
-
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("News Summarizer loaded successfully!");
+        });
     </script>
 </body>
 </html>
