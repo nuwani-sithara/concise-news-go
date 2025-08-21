@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI News Summarizer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .container {
+            width: 90%;
+            max-width: 1500px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(90deg, #4b6cb7 0%, #182848 100%);
+            color: white;
+            padding: 25px 30px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+        
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 30px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        
+        @media (max-width: 768px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .input-section, .output-section {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .section-title {
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            color: #4b6cb7;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        textarea {
+            width: 100%;
+            height: 250px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1rem;
+            resize: vertical;
+            transition: border-color 0.3s;
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: #4b6cb7;
+        }
+        
+        .button-container {
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        button {
+            padding: 14px 35px;
+            background: linear-gradient(90deg, #4b6cb7 0%, #182848 100%);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: 600;
+            transition: all 0.3s;
+            box-shadow: 0 5px 15px rgba(75, 108, 183, 0.4);
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(75, 108, 183, 0.6);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button:disabled {
+            background: #b0b0b0;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .result-box {
+            flex-grow: 1;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 5px solid #4b6cb7;
+            overflow-y: auto;
+        }
+        
+        .summary-text {
+            line-height: 1.6;
+            font-size: 1.05rem;
+            white-space: pre-wrap;
+        }
+        
+        .placeholder {
+            color: #888;
+            font-style: italic;
+        }
+        
+        .notification {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+            border-left: 5px solid #ffc107;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border-left: 5px solid #dc3545;
+        }
+        
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border-left: 5px solid #17a2b8;
+        }
+        
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #4b6cb7;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .word-count {
+            text-align: right;
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #6c757d;
+            font-size: 0.9rem;
+            border-top: 1px solid #eee;
+            background: #f8f9fa;
+        }
+        
+        .examples {
+            margin-top: 20px;
+        }
+        
+        .example-btn {
+            padding: 8px 15px;
+            background: #e9ecef;
+            border: none;
+            border-radius: 5px;
+            margin: 0 5px 10px 0;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.3s;
+        }
+        
+        .example-btn:hover {
+            background: #dde1e6;
+        }
+        
+        .feature-list {
+            margin-top: 20px;
+            padding-left: 20px;
+        }
+        
+        .feature-list li {
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-newspaper"></i> AI News Summarizer</h1>
+            <p class="subtitle">Transform lengthy articles into concise summaries with artificial intelligence</p>
+        </header>
+        
+        <div class="content">
+            <div class="input-section">
+                <h3 class="section-title"><i class="fas fa-pencil-alt"></i> Input Article</h3>
+                
+                <!-- <div class="notification warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <div>No Hugging Face API token detected. Showing mock summaries for demonstration. Add your HF_API_TOKEN to the .env file for real AI summaries.</div>
+                </div> -->
+                
+                <textarea id="newsInput" placeholder="Paste your news article here... (Minimum 100 words for best results)"></textarea>
+                <div class="word-count">Word count: <span id="wordCount">0</span></div>
+                
+                <div class="examples">
+                    <p><strong>Try an example:</strong></p>
+                    <button class="example-btn" onclick="loadExample(1)">Technology</button>
+                    <button class="example-btn" onclick="loadExample(2)">Science</button>
+                    <button class="example-btn" onclick="loadExample(3)">Business</button>
+                </div>
+                
+                <div class="button-container">
+                    <button id="summarizeBtn" onclick="summarize()">
+                        <i class="fas fa-compress-alt"></i> Summarize Article
+                    </button>
+                </div>
+                
+                <div class="notification info">
+                    <i class="fas fa-info-circle"></i>
+                    <div>For best results, use articles with at least 100 words. Press Ctrl+Enter to summarize.</div>
+                </div>
+            </div>
+            
+            <div class="output-section">
+                <h3 class="section-title"><i class="fas fa-file-alt"></i> AI Summary</h3>
+                <div class="result-box">
+                    <div id="result">
+                        <p class="placeholder">Your summary will appear here after processing...</p>
+                    </div>
+                </div>
+                
+                <div class="feature-list">
+                    <p><strong>Features:</strong></p>
+                    <ul>
+                        <li>Advanced AI-powered summarization</li>
+                        <li>Preserves key information and context</li>
+                        <li>Handles articles of any length</li>
+                        <li>Fast and efficient processing</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>Powered by Hugging Face AI Models | Built with Go & Gin | Demo Version</p>
+        </footer>
+    </div>
+
+    <script>
+        // Example articles
+        const examples = {
+            1: `Artificial intelligence is transforming the technology landscape at an unprecedented pace. Recent advancements in machine learning have enabled computers to perform tasks that were once thought to be exclusively human, such as natural language processing, image recognition, and even creative endeavors like art and music composition.
+
+Major tech companies are investing billions in AI research and development. Google's DeepMind has made significant breakthroughs in protein folding prediction, which could revolutionize medicine and drug discovery. Meanwhile, OpenAI's GPT models have demonstrated remarkable capabilities in understanding and generating human-like text.
+
+The ethical implications of AI are also gaining attention. Researchers are working on ensuring that AI systems are fair, transparent, and aligned with human values. As AI becomes more integrated into our daily lives, from virtual assistants to recommendation algorithms, it's crucial to address these concerns to build a future where AI benefits all of humanity.`,
+
+            2: `Climate change continues to be one of the most pressing issues facing our planet. Recent studies show that global temperatures are rising faster than previously predicted, leading to more frequent and severe weather events. Scientists warn that without immediate action, we may reach a point of irreversible damage to our ecosystems.
+
+Researchers are exploring various solutions to mitigate climate change. Carbon capture technologies are becoming more efficient and affordable, offering hope for reducing the amount of CO2 in the atmosphere. Renewable energy sources like solar and wind power are also seeing rapid advancements, with efficiency rates improving and costs decreasing.
+
+In addition to technological solutions, changes in policy and individual behavior are crucial. International agreements like the Paris Climate Accord aim to coordinate global efforts to reduce greenhouse gas emissions. Meanwhile, individuals can contribute by reducing their carbon footprint through lifestyle changes such as using public transportation, reducing meat consumption, and supporting sustainable products.`,
+
+            3: `The global economy is showing signs of recovery after the challenges posed by the pandemic. Stock markets have reached record highs in many countries, and unemployment rates are gradually decreasing. However, economists caution that the recovery is uneven across different sectors and regions.
+
+Remote work has become a permanent feature for many businesses, leading to changes in commercial real estate and urban planning. Companies are adopting hybrid models that combine office and remote work, which has implications for everything from transportation to restaurant industries.
+
+Inflation concerns are also shaping economic policy. Central banks are carefully balancing the need to support economic growth with the risk of rising prices. Supply chain disruptions continue to affect various industries, prompting businesses to rethink their logistics and inventory management strategies.`
+        };
+
+        // Update word count as user types
+        document.getElementById('newsInput').addEventListener('input', function() {
+            const text = this.value.trim();
+            const wordCount = text ? text.split(/\s+/).length : 0;
+            document.getElementById('wordCount').textContent = wordCount;
+            
+            // Show warning if text is too short
+            const button = document.getElementById('summarizeBtn');
+            button.disabled = wordCount < 10;
+        });
+        
+        // Load example article
+        function loadExample(id) {
+            document.getElementById('newsInput').value = examples[id];
+            const event = new Event('input', { bubbles: true });
+            document.getElementById('newsInput').dispatchEvent(event);
+        }
+        
+        // Generate a mock summary for demonstration
+        function generateMockSummary(text) {
+            // Simple algorithm to create a mock summary
+            const sentences = text.split('. ');
+            if (sentences.length <= 3) return text; // Too short to summarize
+            
+            // Select the first, middle, and last sentences
+            const firstSentence = sentences[0];
+            const middleIndex = Math.floor(sentences.length / 2);
+            const middleSentence = sentences[middleIndex];
+            const lastSentence = sentences[sentences.length - 1];
+            
+            // Combine into a summary
+            return `${firstSentence}. ${middleSentence}. ${lastSentence}. [This is a mock summary for demonstration purposes. Add your HF_API_TOKEN to the .env file for real AI summaries.]`;
+        }
+        
+        // Summarize function
+        // Summarize function - UPDATED VERSION
+        async function summarize() {
+            const text = document.getElementById('newsInput').value.trim();
+            const resultDiv = document.getElementById('result');
+            const button = document.getElementById('summarizeBtn');
+            
+            // Clear previous results
+            resultDiv.innerHTML = '';
+            
+            // Validate input
+            if (!text) {
+                resultDiv.innerHTML = `
+                    <div class="notification error">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <div>Please enter some text to summarize</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            const wordCount = text.split(/\s+/).length;
+            if (wordCount < 10) {
+                resultDiv.innerHTML = `
+                    <div class="notification error">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <div>Please enter a longer text for summarization (at least 10 words)</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Show loading state
+            resultDiv.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <div>Processing your article with AI... This may take a moment.</div>
+                </div>
+            `;
+            
+            button.disabled = true;
+            
+            try {
+                // Make actual API call to your Go backend
+                const response = await fetch('/summarize', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ text: text })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Display the actual summary from the API
+                    resultDiv.innerHTML = `
+                        <div class="summary-text">${data.summary}</div>
+                    `;
+                } else {
+                    // Show error message
+                    resultDiv.innerHTML = `
+                        <div class="notification error">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <div>Error: ${data.error || 'Failed to generate summary'}</div>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                resultDiv.innerHTML = `
+                    <div class="notification error">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <div>Network error: Failed to connect to the server</div>
+                    </div>
+                `;
+            } finally {
+                button.disabled = false;
+            }
+        }
+
+        // Allow submitting with Ctrl+Enter
+        document.getElementById('newsInput').addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'Enter') {
+                summarize();
+            }
+        });
+
+        // Check if Hugging Face token is configured
+        async function checkServerStatus() {
+            try {
+                const response = await fetch('/health');
+                const data = await response.json();
+                
+                if (data.status === 'ok_no_token') {
+                    // Show warning if no token is configured
+                    const notificationContainer = document.querySelector('.input-section');
+                    const warningDiv = document.createElement('div');
+                    warningDiv.className = 'notification warning';
+                    warningDiv.innerHTML = `
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <div>No Hugging Face API token detected. Showing mock summaries for demonstration. Add your HF_API_TOKEN to the .env file for real AI summaries.</div>
+                    `;
+                    
+                    // Insert after the section title
+                    const sectionTitle = document.querySelector('.section-title');
+                    sectionTitle.parentNode.insertBefore(warningDiv, sectionTitle.nextSibling);
+                }
+            } catch (error) {
+                console.error('Could not check server status:', error);
+            }
+        }
+
+        // Check server status when page loads
+        document.addEventListener('DOMContentLoaded', checkServerStatus);
+
+    </script>
+</body>
+</html>
